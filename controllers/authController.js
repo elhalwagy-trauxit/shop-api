@@ -248,7 +248,7 @@ exports.getMyOrders = catchAsync(async (req, res, next) => {
       'order_id -_id'
     );
     const user_id = decoded.data.user.id;
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
       data: {
         user_id,
@@ -258,6 +258,8 @@ exports.getMyOrders = catchAsync(async (req, res, next) => {
   } else {
     return next(new AppError('Token is Invalid.', 401));
   }
+
+  return next(new AppError('There is Axios Error.', 400));
 });
 
 exports.updateMyOrder = catchAsync(async (req, res, next) => {
