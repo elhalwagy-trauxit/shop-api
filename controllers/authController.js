@@ -249,7 +249,7 @@ exports.getMyOrders = (req, res, next) => {
               .select('order_id -_id')
               .then((orders) => {
                 const user_id = decoded.data.user.id;
-                res.status(200).json({
+                return res.status(200).json({
                   status: 'success',
                   data: {
                     user_id,
@@ -259,14 +259,14 @@ exports.getMyOrders = (req, res, next) => {
               });
           })
           .catch((error) => {
-            next(new AppError('Error verifying token', 500));
+            return next(new AppError('Error verifying token', 500));
           });
       } else {
-        next(new AppError('Token is Invalid.', 401));
+        return next(new AppError('Token is Invalid.', 401));
       }
     })
     .catch((error) => {
-      next(new AppError('There is Axios Error.', 400));
+      return next(new AppError('There is Axios Error.', 400));
     });
 };
 
