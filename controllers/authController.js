@@ -203,75 +203,80 @@ exports.addMyOrders = catchAsync(async (req, res, next) => {
   const headers = {
     Authorization: `Bearer ${token}`,
   };
+  try {
+    // Send the POST request with Axios
+    const response = await axios.post(apiUrl, null, { headers });
+   
+    if (response.data.success === true) {
+      const decoded = await promisify(jwt.verify)(
+        token,
+        process.env.JWT_SECRET
+      );
+    
+      req.body.user_id = decoded.data.user.id;
 
-  // Send the POST request with Axios
-  const response = await axios.post(apiUrl, null, { headers });
-  console.log(response.data);
-  if (response.data.success === true) {
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-    console.log(decoded.data.user.id);
-    req.body.user_id = decoded.data.user.id;
+      const orders = await Order.create(req.body);
 
-    const orders = await Order.create(req.body);
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        orders,
-      },
+      res.status(201).json({
+        status: 'success',
+        data: {
+          orders,
+        },
+      });
+    } else {
+      return next(new AppError('Token is Invalid.', 401));
+    }
+  } catch (err) {
+    res.status(401).json({
+      status: 'fail',
+      message: 'Token is Invalid.',
     });
-  } else {
-    return next(new AppError('Token is Invalid.', 401));
   }
 });
 
-exports.getMyOrders = (req, res, next) => {
+exports.getMyOrders = catchAsync(async (req, res, next) => {
   const token = req.body.token;
-  console.log(token);
+  // Define the API endpoint
   const apiUrl = 'https://trauxit.shop/us/wp-json/jwt-auth/v1/token/validate';
 
+  // Create the request headers with the Authorization header
   const headers = {
     Authorization: `Bearer ${token}`,
   };
+  try {
+    // Send the POST request with Axios
+    const response = await axios.post(apiUrl, null, { headers });
+    if (response.statusCode === 500) {
+      return next(new AppError('Axios Error', 500));
+    }
+    if (response.data.success === true) {
+      const decoded = await promisify(jwt.verify)(
+        token,
+        process.env.JWT_SECRET
+      );
+      req.body.user_id = decoded.data.user.id;
 
-  axios
-    .post(apiUrl, null, { headers })
-    .then((response) => {
-      console.log(response.data);
-      if (response.data.success === true) {
-        return jwt
-          .verify(token, process.env.JWT_SECRET)
-          .then((decoded) => {
-            console.log(decoded.data.user.id);
-            req.body.user_id = decoded.data.user.id;
-
-            return Order.find({ user_id: decoded.data.user.id })
-              .select('order_id -_id')
-              .then((orders) => {
-                const user_id = decoded.data.user.id;
-                return res.status(200).json({
-                  status: 'success',
-                  data: {
-                    user_id,
-                    orders,
-                  },
-                });
-              });
-          })
-          .catch((error) => {
-            return next(new AppError('Error verifying token', 500));
-          });
-      } else {
-        return next(new AppError('Token is Invalid.', 401));
-      }
-    })
-    .catch((error) => {
-      return res.status(500).json({
-        status: 'error',
-        message: 'There is an axios order',
+      let orders = await Order.find({ user_id: decoded.data.user.id }).select(
+        'order_id -_id'
+      );
+      const user_id = decoded.data.user.id;
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          user_id,
+          orders,
+        },
       });
+    } else {
+      return next(new AppError('Token is Invalid.', 401));
+    }
+  } catch (err) {
+    res.status(401).json({
+      status: 'fail',
+      message: 'Token is Invalid.',
     });
-};
+  }
+});
 
 exports.updateMyOrder = catchAsync(async (req, res, next) => {
   const token = req.body.token;
