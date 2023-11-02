@@ -266,7 +266,10 @@ exports.getMyOrders = (req, res, next) => {
       }
     })
     .catch((error) => {
-      return next(new AppError('There is Axios Error.', 400));
+      return res.status(500).json({
+        status: 'error',
+        message: 'There is an axios order',
+      });
     });
 };
 
