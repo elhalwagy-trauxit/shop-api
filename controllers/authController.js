@@ -225,41 +225,50 @@ exports.addMyOrders = catchAsync(async (req, res, next) => {
   }
 });
 
-exports.getMyOrders = catchAsync(async (req, res, next) => {
+exports.getMyOrders = (req, res, next) => {
   const token = req.body.token;
   console.log(token);
-  // Define the API endpoint
   const apiUrl = 'https://trauxit.shop/us/wp-json/jwt-auth/v1/token/validate';
 
-  // Create the request headers with the Authorization header
   const headers = {
     Authorization: `Bearer ${token}`,
   };
 
-  // Send the POST request with Axios
-  const response = await axios.post(apiUrl, null, { headers });
-  console.log(response.data);
-  if (response.data.success === true) {
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-    console.log(decoded.data.user.id);
-    req.body.user_id = decoded.data.user.id;
+  axios
+    .post(apiUrl, null, { headers })
+    .then((response) => {
+      console.log(response.data);
+      if (response.data.success === true) {
+        return jwt
+          .verify(token, process.env.JWT_SECRET)
+          .then((decoded) => {
+            console.log(decoded.data.user.id);
+            req.body.user_id = decoded.data.user.id;
 
-    let orders = await Order.find({ user_id: decoded.data.user.id }).select(
-      'order_id -_id'
-    );
-    const user_id = decoded.data.user.id;
-    return res.status(200).json({
-      status: 'success',
-      data: {
-        user_id,
-        orders,
-      },
+            return Order.find({ user_id: decoded.data.user.id })
+              .select('order_id -_id')
+              .then((orders) => {
+                const user_id = decoded.data.user.id;
+                res.status(200).json({
+                  status: 'success',
+                  data: {
+                    user_id,
+                    orders,
+                  },
+                });
+              });
+          })
+          .catch((error) => {
+            next(new AppError('Error verifying token', 500));
+          });
+      } else {
+        next(new AppError('Token is Invalid.', 401));
+      }
+    })
+    .catch((error) => {
+      next(new AppError('There is Axios Error.', 400));
     });
-  } else {
-    return next(new AppError('Token is Invalid.', 401));
-  }
-  return next(new AppError('There is Axios Error.', 400));
-});
+};
 
 exports.updateMyOrder = catchAsync(async (req, res, next) => {
   const token = req.body.token;
