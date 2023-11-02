@@ -1,0 +1,11 @@
+[Unit]
+Description=My Node.js Server
+
+[Service]
+ExecStart=/usr/bin/node /package.json
+WorkingDirectory=/path/to/
+Restart=always
+User=ahmed
+
+[Install]
+WantedBy=multi-user.target
